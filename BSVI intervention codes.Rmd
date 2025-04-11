@@ -1,0 +1,75 @@
+---
+title: "BSVI_intervention"
+author: "Dilipkumaar"
+date: "11/04/2025"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Loading Libraries and panel dataset
+```{r}
+library(readxl)
+library(plm)
+options(scipen = 999)
+df <- read_excel("C:\\Users\\Dilip\\Desktop\\data.xlsx", sheet = "Sheet1")
+p.df <- pdata.frame(df)
+
+p.df$coastal <- as.factor(p.df$coastal)
+p.df$d20 <- as.factor(p.df$d20)
+
+d <- read_excel("C:\\Users\\Dilip\\Desktop\\data.xlsx", sheet = "Sheet2")
+p.d <- pdata.frame(d)
+
+p.d$coastal <- as.factor(p.d$coastal)
+```
+
+Panel data regression models
+
+Model 1
+```{r}
+model1 <- plm(log(total_ARI) ~ log(pm25) + log(ghe) + log(trans) + log(ntrans) + log(rain) + log(popdens) + coastal, model = "within", data = p.df)
+summary(model1)
+```
+
+Model1a
+```{r}
+model1a <- plm(log(total_ARI) ~ log(pm25) + log(ghe) + log(trans) + log(ntrans) + log(rain) + log(popdens) + coastal, model = "random", data = p.df)
+summary(model1a)
+```
+
+Model2
+```{r}
+model2 <- plm(log(pm25) ~ log(trans) + log(ntrans) + log(rain) + log(popdens) + coastal, model = "within", data = p.df)
+summary(model2)
+```
+
+Model2a
+```{r}
+model2a <- plm(log(pm25) ~ log(trans) + log(ntrans) + log(rain) + log(popdens) + coastal, model = "random", data = p.df)
+summary(model2a)
+```
+
+Model3
+```{r}
+model3 <-  plm(log(total_ARI) ~ log(pm25) + log(ghe) + log(public) + coastal + log(rain), model = "within", data = p.d)
+summary(model3)
+```
+
+Model3a
+```{r}
+model3a <-  plm(log(total_ARI) ~ log(pm25) + log(ghe) + log(public) + coastal + log(rain), model = "random", data = p.d)
+summary(model3a)
+```
+Difference-in-Differences Model
+```{r}
+p.df_did <- subset(p.df, year %in% c(2017, 2020))
+p.df_did$policy <- ifelse(p.df_did$year == 2020, 1, 0)
+threshold <- quantile(p.df_did$pm25, 0.75)
+p.df_did$policy_group <- ifelse(p.df_did$pm25 > threshold, 1, 0)
+
+did_model <- plm(log(total_ARI) ~ policy * policy_group + coastal + rain + ttrans, data = p.df_did, index = c("state", "year"), model = "within")
+summary(did_model)
+```
